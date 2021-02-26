@@ -2,13 +2,15 @@ library(e1071)
 library("lattice")
 library("MASS")
 library("nnet")
-install.packages("lsr")
+# install.packages("lsr")
 library(lsr)
 library("caret")
 library("dplyr")
+# install.packages("corrplot")
+library(corrplot)
 
 
-train <- read.csv(file="Train.csv", header = TRUE)
+train <- read.csv(file="Documents/cours_ucl/bac3/data/DataAnalitics/Train.csv", header = TRUE)
 str(train)
 
 #we remove the useless variables
@@ -32,7 +34,7 @@ train$Spending_Score <- factor(train$Spending_Score)
 train$Var_1 <- factor(train$Var_1)
 train$Segmentation <- factor(train$Segmentation)
 
-#assign the NA (missing) values
+# Assign the NA (missing) values
 train$Gender <- replace(train$Gender, is.na(train$Gender), "Male")
 train$Ever_Married <- replace(train$Ever_Married, is.na(train$Ever_Married), "Yes")
 train$Graduated <- replace(train$Graduated, is.na(train$Graduated), "Yes")
@@ -53,14 +55,14 @@ View(train)
 sum(is.na(train))
 summary(train)
 
-#standard deviation of the numerical values
+# Standard deviation of the numerical values
 sd(train$Age)
 sd(train$Work_Experience)
 sd(train$Family_Size)
 sd(train$Car)
 sd(train$Child)
 
-#compute the skewness of the numerical values
+# Compute the skewness of the numerical values
 
 skewness(train$Age)
 skewness(train$Work_Experience)
@@ -68,7 +70,7 @@ skewness(train$Family_Size)
 skewness(train$Car)
 skewness(train$Child)
 
-#compute the kurtosis of the numerical values
+# Compute the kurtosis of the numerical values
 
 kurtosis(train$Age)
 kurtosis(train$Work_Experience)
@@ -76,15 +78,15 @@ kurtosis(train$Family_Size)
 kurtosis(train$Car)
 kurtosis(train$Child)
 
-#histogram of the numerical variables
+# Histogram and bar-plot of the numerical variables (Histogram for continuous variable and bar-plot for discrete)
 
-hist(train$Age, prob = FALSE)
-hist(train$Work_Experience, prob = FALSE)
-hist(train$Family_Size, prob = FALSE)
-hist(train$Car, prob = FALSE)
-hist(train$Child, prob = FALSE)
+hist(train$Age, prob = FALSE, xlab="Age")
+hist(train$Work_Experience, prob = FALSE, xlab="Work Experience")
+barplot(table(train$Family_Size), xlab="Family Size")
+hist(train$Car, prob = FALSE, xlab="Car")
+barplot(table(train$Child), xlab="Child")
 
-#barplots for the categorical variables
+# Bar-plots for the categorical variables
 barplot(table(train$Gender), main = "Gender")
 barplot(table(train$Ever_Married), main = "Ever Married")
 barplot(table(train$Graduated), main = "Graduated")
@@ -94,8 +96,11 @@ barplot(table(train$Credit_Owner), main = "Credit Owner")
 barplot(table(train$Var_1), main = "Var_1")
 barplot(table(train$Segmentation), main = "Segmentation")
 
-#matrice 
-cor(train[c(3,6,8,9, 11)])
+# Correlation matrix 
+M<-cor(train[c(3,6,8,9, 11)])
+corrplot(M, method="number")
 
-
-
+# Scatter Plot
+ggplot(data.frame(Age = train$Age, Work_Experience=train$Work_Experience), aes(x=Age, y=Work_Experience)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
+ggplot(data.frame(Age = train$Age, Family_Size=train$Family_Size), aes(x=Age, y=Family_Size)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
+ggplot(data.frame(Work_Experience = train$Work_Experience, Family_Size=train$Family_Size), aes(x=Work_Experience, y=Family_Size)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
