@@ -156,3 +156,44 @@ cramersV(train$Credit_Owner, train$Var_1)
 cramersV(train$Credit_Owner, train$Segmentation)
 
 cramersV(train$Var_1, train$Segmentation)
+
+#Data partition
+train_ind <- createDataPartition(train$Segmentation, p=0.6, list = FALSE)
+training <- train[train_ind, ]
+testing <- train[-train_ind, ]
+
+#Logistic regression
+
+#We check the variables which have an impact on determining the segmentation(significant variables)
+summary(glm(formula = Segmentation ~ ., family = binomial(link = 'logit'), data = training))#to see which variables are significant
+
+#we use every variable to predict the segmentation
+model1 <- multinom(Segmentation ~ . , data=training)
+predict(model1, testing, type="prob")
+cm1 <- table(predict(model1, testing), testing$Segmentation)
+cm1
+confusionMatrix(cm1)
+
+#only numerical variables
+model2 <- multinom(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child, data=training)
+predict(model2, testing, type="prob")
+cm2 <- table(predict(model2, testing), testing$Segmentation)
+cm2
+confusionMatrix(cm2)
+
+#only categorical variables
+model3 <- multinom(Segmentation ~ Gender + Ever_Married + Graduated + Profession + Spending_Score + Credit_Owner + Var_1, data=training)
+predict(model3, testing, type="prob")
+cm3 <- table(predict(model3, testing), testing$Segmentation)
+cm3
+confusionMatrix(cm3)
+
+#only significant variables (*** and **)
+model4 <- multinom(Segmentation ~ Profession + Work_Experience + Spending_Score, data=training)
+predict(model4, testing, type="prob")
+cm4 <- table(predict(model4, testing), testing$Segmentation)
+cm4
+confusionMatrix(cm4)
+
+#stepwise
+
