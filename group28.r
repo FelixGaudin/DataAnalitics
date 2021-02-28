@@ -11,11 +11,13 @@ library(lsr)
 library("caret")
 library("dplyr")
 library(corrplot)
+library(rpart)
+library(rpart.plot)
 
 # Import the data-set (pay attention to the path)
 train_dataset <- read.csv(file="Documents/cours_ucl/bac3/data/DataAnalitics/Train.csv", header = TRUE)
 str(train_dataset)
-
+summary(train_dataset)
 #we remove the useless variables
 train_dataset$Licence_Plate <- NULL # It's different for everyone
 
@@ -185,3 +187,12 @@ confusionMatrix(cm4)
 desition_tree_predictor <- train(Segmentation ~ ., data=final_dataset, method="rpart", trControl=controler)
 desition_tree_predictor
 summary(desition_tree_predictor$finalModel)
+
+plot(desition_tree_predictor$finalModel, uniform=FALSE,
+     main="Classification Tree")
+text(desition_tree_predictor$finalModel, use.n.=TRUE, all=TRUE, cex=.8)
+
+# Prettier for graphs but the model is the same
+tree <- rpart(Segmentation~., data=final_dataset, cp=.02)
+rpart.plot(tree, box.palette = "RdBu", shadow.col = "gray", nn=TRUE)
+
