@@ -100,6 +100,27 @@ barplot(table(train_dataset$Segmentation), main = "Segmentation")
 MM<- cor(train_dataset[ , purrr::map_lgl(train_dataset, is.numeric)]) # syntactic sugar to compute only on numerical columns
 corrplot(MM, method="number")
 
+
+# Cramer' V (for non-numerical values)
+get_cramersV_correlation_matrix <- function(df) {
+  # inspire by https://stackoverflow.com/questions/44070853/association-matrix-in-r
+  # Initialize empty matrix to store coefficients
+  resp <- matrix(ncol = length(df),
+                 nrow = length(df),
+                 dimnames = list(names(df), 
+                                 names(df)))
+  # Computation
+  for (r in seq(nrow(resp))){
+    for (c in seq(ncol(resp))){
+      resp[[r, c]] <- cramersV(df[[r]], df[[c]])
+    }
+  }
+  return(resp)
+}
+
+corrplot(get_cramersV_correlation_matrix(train_dataset %>% select(1, 2, 4, 5, 7, 10, 12, 13)), method="number")
+
+
 # Scatter Plot
 ggplot(data.frame(Age = train_dataset$Age, Work_Experience=train_dataset$Work_Experience), aes(x=Age, y=Work_Experience)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
 ggplot(data.frame(Age = train_dataset$Age, Family_Size=train_dataset$Family_Size), aes(x=Age, y=Family_Size)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
@@ -121,6 +142,44 @@ controler <- trainControl(method = "cv", number=10)
 naive_bayes_predictor <- train(Segmentation~ ., data=final_dataset, trControl=controler, method="naive_bayes")
 naive_bayes_predictor
 summary(naive_bayes_predictor$finalModel)
+
+#Data partition
+train_ind <- createDataPartition(train_dataset$Segmentation, p=0.6, list = FALSE)
+training <- train_dataset[train_ind, ]
+testing <- train_dataset[-train_ind, ]
+
+#Logistic regression
+
+#We check the variables which have an impact on determining the segmentation(significant variables)
+summary(glm(formula = Segmentation ~ ., family = binomial(link = 'logit'), data = training))#to see which variables are significant
+
+#we use every variable to predict the segmentation
+model1 <- multinom(Segmentation ~ . , data=training)
+predict(model1, testing, type="prob")
+cm1 <- table(predict(model1, testing), testing$Segmentation)
+cm1
+confusionMatrix(cm1)
+
+#only numerical variables
+model2 <- multinom(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child, data=training)
+predict(model2, testing, type="prob")
+cm2 <- table(predict(model2, testing), testing$Segmentation)
+cm2
+confusionMatrix(cm2)
+
+#only categorical variables
+model3 <- multinom(Segmentation ~ Gender + Ever_Married + Graduated + Profession + Spending_Score + Credit_Owner + Var_1, data=training)
+predict(model3, testing, type="prob")
+cm3 <- table(predict(model3, testing), testing$Segmentation)
+cm3
+confusionMatrix(cm3)
+
+#only significant variables (*** and **)
+model4 <- multinom(Segmentation ~ Profession + Work_Experience + Spending_Score, data=training)
+predict(model4, testing, type="prob")
+cm4 <- table(predict(model4, testing), testing$Segmentation)
+cm4
+confusionMatrix(cm4)
 
 # Decision tree predictor
 desition_tree_predictor <- train(Segmentation ~ ., data=final_dataset, method="rpart", trControl=controler)
