@@ -1,7 +1,7 @@
 # You may need to install those packages
 # install.packages("lsr")
 # install.packages("corrplot")
-
+install.packages(c("FactoMineR", "factoextra"))
 # Importing libs
 library(e1071)
 library("lattice")
@@ -12,10 +12,12 @@ library("caret")
 library("dplyr")
 library(corrplot)
 library(rpart)
-library(rpart.plot)
+library(FactoMineR)
+library("factoextra")
+
 
 # Import the data-set (pay attention to the path)
-train_dataset <- read.csv(file="Documents/cours_ucl/bac3/data/DataAnalitics/Train.csv", header = TRUE)
+train_dataset <- read.csv(file="Train.csv", header = TRUE)
 str(train_dataset)
 summary(train_dataset)
 #we remove the useless variables
@@ -145,10 +147,57 @@ naive_bayes_predictor <- train(Segmentation~ ., data=final_dataset, trControl=co
 naive_bayes_predictor
 summary(naive_bayes_predictor$finalModel)
 
+#PCA (only numerical variables)
+train_dataset.pca <- prcomp(train_dataset[,c(3,6,8,9,11)], center = TRUE,scale = TRUE)
+summary(train_dataset.pca)
+
+#We create a set with PCA dimensions
+pca_set <- data.frame(matrix(nrow = nrow(train_dataset), ncol = 4))
+colnames(pca_set) <- c("PC1","PC2","PC3","PC4")
+for (i in 1:4)
+{
+  pca_set[,i]= train_dataset.pca$x[,i]
+}
+head(pca_set)
+
+#MCA (categorical variables)
+train_dataset.mca <- MCA(train_dataset[c(1,2,4,5,7,10,12,13)], graph = FALSE, ncp = 14)
+summary(train_dataset.mca)
+var <- get_mca_ind(train_dataset.mca)
+var$coord
+#We create a set with MCA dimensions
+mca_set <- data.frame(matrix(nrow = nrow(train_dataset), ncol = 14))
+colnames(mca_set) <- c("DIM1","DIM2","DIM3","DIM4", "DIM5", "DIM6","DIM7","DIM8","DIM9", "DIM10", "DIM11","DIM12","DIM13","DIM14")
+for (i in 1:14)
+{
+  mca_set[,i]= var$coord[,i]
+}
+head(mca_set)
+
+#we combine everything in only one dataset
+final_train_dataset <- cbind(pca_set, mca_set, train_dataset[c(1:13)])
+
+#Data partition PCA MCA test
+train_ind <- createDataPartition(final_train_dataset$Segmentation, p=0.6, list = FALSE)
+final_training <- final_train_dataset[train_ind, ]
+final_testing <- final_train_dataset[-train_ind, ]
+
+#Logistic regression PCA MCA test
+
+#we use every variable to predict the segmentation
+model <- multinom(Segmentation ~ . , data=final_training)
+predict(model, final_testing, type="prob")
+cm <- table(predict(model, final_testing), final_testing$Segmentation)
+cm
+confusionMatrix(cm)
+
+
 #Data partition
 train_ind <- createDataPartition(train_dataset$Segmentation, p=0.6, list = FALSE)
 training <- train_dataset[train_ind, ]
 testing <- train_dataset[-train_ind, ]
+
+
 
 #Logistic regression
 
