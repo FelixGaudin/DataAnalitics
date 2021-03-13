@@ -2,6 +2,8 @@
 # install.packages("lsr")
 # install.packages("corrplot")
 install.packages(c("FactoMineR", "factoextra"))
+install.packages("neuralnet")
+require(neuralnet)
 # Importing libs
 library(e1071)
 library("lattice")
@@ -14,6 +16,8 @@ library(corrplot)
 library(rpart)
 library(FactoMineR)
 library("factoextra")
+library("neuralnet")
+
 
 
 # Import the data-set (pay attention to the path)
@@ -480,9 +484,32 @@ mean(vals)
 min(vals)
 max(vals)
 
+#Neural networks
+
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- neuralnet(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child,data=training_dataset, hidden=c(2,1), linear.output=FALSE, threshold=0.01)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+
+
 
 # Decision tree predictor
-desition_tree_predictor <- train(Segmentation ~ ., data=final_dataset, method="rpart", trControl=controler)
+desition_tree_predictor <- train(Segmentation ~ , data=final_dataset, method="rpart", trControl=controler)
 desition_tree_predictor
 summary(desition_tree_predictor$finalModel)
 
