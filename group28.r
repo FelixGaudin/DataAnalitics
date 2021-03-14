@@ -2,7 +2,8 @@
 # install.packages("lsr")
 # install.packages("corrplot")
 install.packages(c("FactoMineR", "factoextra"))
-install.packages("neuralnet")
+install.packages("randomForest")
+library(randomForest)
 require(neuralnet)
 # Importing libs
 library(e1071)
@@ -16,7 +17,7 @@ library(corrplot)
 library(rpart)
 library(FactoMineR)
 library("factoextra")
-library("neuralnet")
+library(tree)
 
 
 
@@ -134,13 +135,6 @@ ggplot(data.frame(Age = train_dataset$Age, Work_Experience=train_dataset$Work_Ex
 ggplot(data.frame(Age = train_dataset$Age, Family_Size=train_dataset$Family_Size), aes(x=Age, y=Family_Size)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
 ggplot(data.frame(Work_Experience = train_dataset$Work_Experience, Family_Size=train_dataset$Family_Size), aes(x=Work_Experience, y=Family_Size)) + geom_point(alpha = 0.3) + geom_smooth(method = lm)
 
-# Drop columns
-#final_dataset <- train_dataset
-#final_dataset <- final_dataset[ , -which(names(final_dataset) %in% c("Car"))] # Drop Car and keep Age (correlation of 0.97 so we don't need both columns)
-#final_dataset <- final_dataset[ , -which(names(final_dataset) %in% c("Child"))] # Drop Child and keep Family_Size (correlation of 0.79) 
-#final_dataset <- final_dataset[ , -which(names(final_dataset) %in% c("Ever_Married"))] # Drop Ever_Married and keep Spending_Score (correlation of 0.67) 
-
-#head(final_dataset)
 
 
 # Set accuracy test : K-CV with K=10
@@ -160,7 +154,7 @@ for (i in 1:4)
 head(pca_set)
 
 #MCA (categorical variables)
-train_dataset.mca <- MCA(train_dataset[c(1,2,4,5,7,10,12,13)], graph = FALSE, ncp = 11)
+train_dataset.mca <- MCA(train_dataset[c(1,2,4,5,7,10,12)], graph = FALSE, ncp = 11)
 summary(train_dataset.mca)
 var <- get_mca_ind(train_dataset.mca)
 var$coord
@@ -300,14 +294,14 @@ mean(vals)
 min(vals)
 max(vals)
 
-#MCA + categorical vars MCA +DIM 1 acc = 1 ??????
+#MCA + categorical 0.4553365
 vals <- c()
 folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
 for(i in 1:10){
   indexes <- which(folds==i,arr.ind=TRUE)
   testing_dataset <- final_train_dataset[indexes, ]
   training_dataset <- final_train_dataset[-indexes, ]
-  model <- multinom(Segmentation ~  Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1 + DIM1, data=training_dataset)
+  model <- multinom(Segmentation ~  Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1 + DIM1 + DIM2 + DIM3 + DIM4 +DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data=training_dataset)
   pred <- predict(model, testing_dataset)
   tab <- table(pred, testing_dataset$Segmentation)
   cm <- confusionMatrix(tab)
@@ -327,7 +321,7 @@ for(i in 1:10){
   indexes <- which(folds==i,arr.ind=TRUE)
   testing_dataset <- final_train_dataset[indexes, ]
   training_dataset <- final_train_dataset[-indexes, ]
-  model <- multinom(Segmentation ~  LDA1+LDA2+LDA3 + Profession + Work_Experience + Spending_Score, data=training_dataset)
+  model <- multinom(Segmentation ~ LDA1+LDA2+LDA3 +Profession + Work_Experience + Spending_Score, data=training_dataset)
   pred <- predict(model, testing_dataset)
   tab <- table(pred, testing_dataset$Segmentation)
   cm <- confusionMatrix(tab)
@@ -340,7 +334,30 @@ mean(vals)
 min(vals)
 max(vals)
 
+#MCA + PCA 0.4559002
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- multinom(Segmentation ~  PC1 +PC2+PC3+PC4 + DIM1 + DIM2 + DIM3 + DIM4 +DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data=training_dataset)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+
+
 # Naive Bayes predictor
+
 
 #every variable 0.4610856
 vals <- c()
@@ -350,6 +367,26 @@ for(i in 1:10){
   testing_dataset <- final_train_dataset[indexes, ]
   training_dataset <- final_train_dataset[-indexes, ]
   model <- naiveBayes(Segmentation ~ Gender + Ever_Married + Age + Graduated +Profession + Work_Experience + Spending_Score + Family_Size + Car +Credit_Owner + Child + Var_1 , data=training_dataset, laplace = 3)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#num variable 0.4610856
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- naiveBayes(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child , data=training_dataset, laplace = 3)
   pred <- predict(model, testing_dataset)
   tab <- table(pred, testing_dataset$Segmentation)
   cm <- confusionMatrix(tab)
@@ -411,7 +448,7 @@ for(i in 1:10){
   indexes <- which(folds==i,arr.ind=TRUE)
   testing_dataset <- final_train_dataset[indexes, ]
   training_dataset <- final_train_dataset[-indexes, ]
-  model <- naiveBayes(Segmentation ~  PC1 + PC2 +PC3 + PC4 + Age + Work_Experience + Family_Size + Car + Child, data=training_dataset, laplace = 3)
+  model <- naiveBayes(Segmentation ~  PC1 + PC2 + PC3 + PC4 + Age + Work_Experience + Family_Size + Car + Child, data=training_dataset, laplace = 3)
   pred <- predict(model, testing_dataset)
   tab <- table(pred, testing_dataset$Segmentation)
   cm <- confusionMatrix(tab)
@@ -424,7 +461,7 @@ mean(vals)
 min(vals)
 max(vals)
 
-#MCA + categorical variables 0.784313
+#MCA + categorical variables 0.4341591
 vals <- c()
 folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
 for(i in 1:10){
@@ -444,55 +481,14 @@ mean(vals)
 min(vals)
 max(vals)
 
-#LDA + significant 0.4671153
+#MCA + categorical variables 0.4341591
 vals <- c()
 folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
 for(i in 1:10){
   indexes <- which(folds==i,arr.ind=TRUE)
   testing_dataset <- final_train_dataset[indexes, ]
   training_dataset <- final_train_dataset[-indexes, ]
-  model <- naiveBayes(Segmentation ~   LDA1+LDA2+LDA3 + Profession + Work_Experience + Spending_Score, data=training_dataset, laplace = 3)
-  pred <- predict(model, testing_dataset)
-  tab <- table(pred, testing_dataset$Segmentation)
-  cm <- confusionMatrix(tab)
-  overall <- cm$overall
-  acc <-  overall['Accuracy'] 
-  vals <- c(vals, acc)
-}
-vals
-mean(vals)
-min(vals)
-max(vals)
-
-
-vals <- c()
-folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
-for(i in 1:10){
-  indexes <- which(folds==i,arr.ind=TRUE)
-  testing_dataset <- final_train_dataset[indexes, ]
-  training_dataset <- final_train_dataset[-indexes, ]
-  model <- naiveBayes(Segmentation ~   LDA1+LDA2+LDA3+PC1+PC2+PC3, data=training_dataset, laplace = 3)
-  pred <- predict(model, testing_dataset)
-  tab <- table(pred, testing_dataset$Segmentation)
-  cm <- confusionMatrix(tab)
-  overall <- cm$overall
-  acc <-  overall['Accuracy'] 
-  vals <- c(vals, acc)
-}
-vals
-mean(vals)
-min(vals)
-max(vals)
-
-#Neural networks
-
-vals <- c()
-folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
-for(i in 1:10){
-  indexes <- which(folds==i,arr.ind=TRUE)
-  testing_dataset <- final_train_dataset[indexes, ]
-  training_dataset <- final_train_dataset[-indexes, ]
-  model <- neuralnet(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child,data=training_dataset, hidden=c(2,1), linear.output=FALSE, threshold=0.01)
+  model <- naiveBayes(Segmentation ~  Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1 + DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data=training_dataset, laplace = 3)
   pred <- predict(model, testing_dataset)
   tab <- table(pred, testing_dataset$Segmentation)
   cm <- confusionMatrix(tab)
@@ -507,17 +503,380 @@ max(vals)
 
 
 
+#MCA + PCA 0.4376676
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- naiveBayes(Segmentation ~  PC1 + PC2 + PC3 + PC4 +DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data=training_dataset, laplace = 3)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
 
-# Decision tree predictor
-desition_tree_predictor <- train(Segmentation ~ , data=final_dataset, method="rpart", trControl=controler)
-desition_tree_predictor
-summary(desition_tree_predictor$finalModel)
 
-plot(desition_tree_predictor$finalModel, uniform=FALSE,
-     main="Classification Tree")
-text(desition_tree_predictor$finalModel, use.n.=TRUE, all=TRUE, cex=.8)
+# Random forest 
 
-# Prettier for graphs but the model is the same
-tree <- rpart(Segmentation~., data=final_dataset, cp=.02)
-rpart.plot(tree, box.palette = "RdBu", shadow.col = "gray", nn=TRUE)
+# every var  0.4672552
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~ Gender + Ever_Married + Age + Graduated +Profession + Work_Experience + Spending_Score + Family_Size + Car +Credit_Owner + Child + Var_1, data = training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#numerical 0.3887226
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~   Age + Work_Experience + Family_Size + Car + Child,data = training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#categorical var 0.4606641
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~ Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1, data = training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+ 
+#Significant variables 0.4452387
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~  Profession + Work_Experience + Spending_Score , data = training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#PCA + numerical variables 0.3589942
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~  PC1 + PC2 +PC3 + PC4 + Age + Work_Experience + Family_Size + Car + Child, data=training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+
+#MCA + categorical variables 0.4479058
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~ Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1 + DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data=training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#LDA + significant 0.4563174
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~ LDA1+LDA2+LDA3 + Profession + Work_Experience + Spending_Score, data=training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#MCA + PCA 0.4435559
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- randomForest(Segmentation ~ PC1 + PC2 + PC3 + PC4 +DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11,data=training_dataset, ntree = 1500)
+  pred <- predict(model, testing_dataset)
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#Decision tree
+
+#every variable 0.4254643
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ Gender + Ever_Married + Age + Graduated +Profession + Work_Experience + Spending_Score + Family_Size + Car +Credit_Owner + Child + Var_1, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#numerical variables 0.4149499
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ Age + Work_Experience + Family_Size + Car + Child, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#categorical variables 0.4577188
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#significant
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ Profession + Work_Experience + Spending_Score, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#PCA + Num 0.3739496 
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ PC1 + PC2 +PC3 + PC4 + Age + Work_Experience + Family_Size + Car + Child, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#MCA + cat 0.4418752
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~  Gender + Ever_Married + Graduated +Profession + Spending_Score  +Credit_Owner + Var_1 + DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#LDA + significant 0.4055525
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~ LDA1+LDA2+LDA3 + Profession + Work_Experience + Spending_Score, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+#MCA+PCA 0.3887238
+vals <- c()
+folds <- cut(seq(1,nrow(final_train_dataset)),breaks=10,labels=FALSE)
+for(i in 1:10){
+  indexes <- which(folds==i,arr.ind=TRUE)
+  testing_dataset <- final_train_dataset[indexes, ]
+  training_dataset <- final_train_dataset[-indexes, ]
+  model <- tree(Segmentation ~  PC1 + PC2 + PC3 + PC4 +DIM1 +DIM2 +DIM3+DIM4+DIM5+DIM6+DIM7+DIM8+DIM9+DIM10+DIM11, data = training_dataset, control = tree.control(nobs = nrow(training_dataset), mindev = 0.0003))
+  pred <- predict(model, testing_dataset, type = "class")
+  tab <- table(pred, testing_dataset$Segmentation)
+  cm <- confusionMatrix(tab)
+  overall <- cm$overall
+  acc <-  overall['Accuracy'] 
+  vals <- c(vals, acc)
+}
+vals
+mean(vals)
+min(vals)
+max(vals)
+
+test <- read.csv(file = "TestStudent.csv", header = TRUE)
+test$Licence_Plate <- NULL 
+
+
+test$Credit_Owner <- factor(test$Credit_Owner, labels = c("No", "Yes"))
+
+test$Gender <- factor(test$Gender)
+test$Ever_Married <- factor(test$Ever_Married)
+test$Graduated <- factor(test$Graduated)
+test$Profession <- factor(test$Profession)
+test$Spending_Score <- factor(test$Spending_Score)
+test$Var_1 <- factor(test$Var_1)
+
+# Assign the NA (missing) values
+test$Gender <- replace(test$Gender, is.na(test$Gender), "Male")
+test$Ever_Married <- replace(test$Ever_Married, is.na(test$Ever_Married), "Yes")
+test$Graduated <- replace(test$Graduated, is.na(test$Graduated), "Yes")
+test$Profession <- replace(test$Profession, is.na(test$Profession), "Artist")
+test$Spending_Score <- replace(test$Spending_Score, is.na(test$Spending_Score), "Low")
+test$Credit_Owner <- replace(test$Credit_Owner, is.na(test$Credit_Owner), "No")
+test$Var_1 <- replace(test$Var_1, is.na(test$Var_1), "Cat_6")
+
+
+finalmodel <- multinom(Segmentation ~ LDA1+LDA2+LDA3 +Profession + Work_Experience + Spending_Score, data=training_dataset)
+finalpred <- predict(final, test, threshold = 0.00000001, eps = 0.00000001)
+
+
+write.csv(finalpred, "FinalPrediction.csv", row.names = FALSE)
+
+
 
